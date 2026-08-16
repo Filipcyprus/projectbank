@@ -4,6 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
 
 const app = express();
 // Hosting providers (Railway, Render, Fly.io, etc.) assign the port via the
@@ -98,22 +99,41 @@ function recordLoginEvent(userId, outcome, method, req) {
 }
 
 /* =========================================================================
+ * Password policy - the same rules the client shows live while typing
+ * (see src/lib/password.ts). Enforced here too because client-side
+ * validation is a UX convenience, never the security boundary.
+ * ========================================================================= */
+
+const DEMO_PASSWORD = 'Cyprus#Nisos2026';
+
+function passwordIssues(pw) {
+  const issues = [];
+  if (typeof pw !== 'string' || pw.length < 10) issues.push('at least 10 characters');
+  if (!/[a-z]/.test(pw || '')) issues.push('a lowercase letter');
+  if (!/[A-Z]/.test(pw || '')) issues.push('an uppercase letter');
+  if (!/[0-9]/.test(pw || '')) issues.push('a number');
+  if (!/[^A-Za-z0-9]/.test(pw || '')) issues.push('a symbol (e.g. ! @ # $ %)');
+  return issues;
+}
+
+/* =========================================================================
  * Demo Users & Accounts
  * ========================================================================= */
 
 function initDemoData() {
-  // Create demo user if doesn't exist
+  // Create demo user if doesn't exist, or migrate it off the old 4-digit PIN
+  // scheme from before real passwords were enforced.
   const users = readDB('users');
-  if (!users.demo_user) {
+  if (!users.demo_user || !users.demo_user.passwordHash) {
     users.demo_user = {
       id: 'demo_user',
       email: 'citizen@nisos.cy',
       name: 'Filip Andreou',
       idNumber: 'ID123456789',
-      pin: '1234', // In production: bcrypt hash
+      passwordHash: bcrypt.hashSync(DEMO_PASSWORD, 10),
       identityVerified: true,
       assuranceLevel: 'substantial',
-      createdAt: new Date().toISOString(),
+      createdAt: users.demo_user?.createdAt || new Date().toISOString(),
     };
     writeDB('users', users);
   }
@@ -207,21 +227,22 @@ initDemoData();
  * ========================================================================= */
 
 app.post('/api/auth/login', (req, res) => {
-  const { email, pin } = req.body;
+  const { email, password } = req.body;
   const users = readDB('users');
 
   // Find user by email
   const user = Object.values(users).find((u) => u.email === email);
-  if (!user || user.pin !== pin) {
-    // A wrong PIN against a real email is exactly what a citizen needs to
-    // see in their sign-in history - log it against that account even
+  const validPassword = user?.passwordHash ? bcrypt.compareSync(password || '', user.passwordHash) : false;
+  if (!user || !validPassword) {
+    // A wrong password against a real email is exactly what a citizen needs
+    // to see in their sign-in history - log it against that account even
     // though the attempt is rejected. An unknown email has no account to
     // attach the attempt to, so nothing is recorded.
-    if (user) recordLoginEvent(user.id, 'failed', 'pin', req);
+    if (user) recordLoginEvent(user.id, 'failed', 'password', req);
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 
-  recordLoginEvent(user.id, 'success', 'pin', req);
+  recordLoginEvent(user.id, 'success', 'password', req);
   const sessionId = createSession(user.id);
   res.json({
     sessionId,
@@ -235,11 +256,21 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 app.post('/api/auth/register', (req, res) => {
-  const { name, email, pin, idNumber } = req.body;
+  const { name, email, password, idNumber } = req.body;
 
-  if (!name || !name.trim()) return res.status(400).json({ error: 'Name is required' });
-  if (!email || !email.trim()) return res.status(400).json({ error: 'Email is required' });
-  if (!pin || !/^\d{4,6}$/.test(pin)) return res.status(400).json({ error: 'PIN must be 4-6 digits' });
+  const fullName = (name || '').trim();
+  // Mirrors CY Login's requirement of a full legal name, not a nickname or
+  // single word - at least a given name and a family name.
+  if (fullName.split(/\s+/).filter(Boolean).length < 2) {
+    return res.status(400).json({ error: 'Enter your full name (first and last name)' });
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return res.status(400).json({ error: 'Enter a valid email address' });
+  }
+  const weakness = passwordIssues(password);
+  if (weakness.length > 0) {
+    return res.status(400).json({ error: `Password needs ${weakness.join(', ')}` });
+  }
 
   const users = readDB('users');
   const existing = Object.values(users).find((u) => u.email.toLowerCase() === email.toLowerCase());
@@ -251,9 +282,9 @@ app.post('/api/auth/register', (req, res) => {
   const user = {
     id,
     email,
-    name: name.trim(),
+    name: fullName,
     idNumber: idNumber?.trim() || `ID${Math.floor(100000000 + Math.random() * 899999999)}`,
-    pin,
+    passwordHash: bcrypt.hashSync(password, 10),
     // A self-registered citizen hasn't been through any assurance flow yet -
     // honestly reflects that no verification has actually happened.
     identityVerified: false,

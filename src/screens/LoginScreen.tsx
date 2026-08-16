@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../state/store';
 import { Button } from '../components/ui';
 import { Logo } from '../components/Icon';
+import { checkPassword, isFullName, isStrongPassword } from '../lib/password';
 
 const inputStyle: React.CSSProperties = {
   marginBottom: 'var(--s4)',
@@ -17,18 +18,17 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
   const [mode, setMode] = useState<'signin' | 'register'>('signin');
 
   const [email, setEmail] = useState('citizen@nisos.cy');
-  const [pin, setPin] = useState('1234');
+  const [password, setPassword] = useState('');
 
   const [name, setName] = useState('');
   const [regEmail, setRegEmail] = useState('');
-  const [regPin, setRegPin] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirm, setRegConfirm] = useState('');
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Falls back to the live Railway backend so the deployed app works even if
-  // VITE_API_URL isn't set on the hosting platform. Local dev overrides this
-  // via .env.local (VITE_API_URL=http://localhost:3001), which is gitignored.
   const apiUrl = import.meta.env.VITE_API_URL || 'https://projectbank-production.up.railway.app';
 
   const completeLogin = async (sessionId: string) => {
@@ -46,9 +46,9 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
       const res = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, pin }),
+        body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) throw new Error('Invalid credentials');
+      if (!res.ok) throw new Error('Invalid email or password');
       const { sessionId } = await res.json();
       await completeLogin(sessionId);
     } catch (err) {
@@ -58,15 +58,22 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
     }
   };
 
+  const rules = checkPassword(regPassword);
+  const nameValid = isFullName(name);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(regEmail.trim());
+  const passwordValid = isStrongPassword(regPassword);
+  const passwordsMatch = regPassword.length > 0 && regPassword === regConfirm;
+  const canRegister = nameValid && emailValid && passwordValid && passwordsMatch;
+
   const handleRegister = async () => {
     setLoading(true);
     setError('');
     try {
-      if (!/^\d{4,6}$/.test(regPin)) throw new Error('PIN must be 4-6 digits');
+      if (!canRegister) throw new Error('Fix the highlighted fields before continuing');
       const res = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email: regEmail, pin: regPin }),
+        body: JSON.stringify({ name, email: regEmail, password: regPassword }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || 'Could not create your account');
@@ -124,26 +131,26 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
           />
 
           <label className="t-sm" style={{ display: 'block', marginBottom: 'var(--s2)' }}>
-            PIN (Demo: 1234)
+            Password
           </label>
           <input
             type="password"
-            placeholder="Enter PIN"
-            value={pin}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPin(e.currentTarget.value)}
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.currentTarget.value)}
             style={inputStyle}
           />
 
-          {error && <div style={{ color: 'var(--signal-alert)', marginBottom: 'var(--s3)' }} className="t-sm">{error}</div>}
+          {error && <div style={{ color: 'var(--danger-500)', marginBottom: 'var(--s3)' }} className="t-sm">{error}</div>}
 
-          <Button block loading={loading} onClick={handleLogin} style={{ marginBottom: 'var(--s3)' }}>
+          <Button block loading={loading} disabled={!email.trim() || !password} onClick={handleLogin} style={{ marginBottom: 'var(--s3)' }}>
             Sign in
           </Button>
 
           <div className="t-sm muted" style={{ textAlign: 'center' }}>
             Demo credentials:
             <br />
-            citizen@nisos.cy | 1234
+            citizen@nisos.cy | Cyprus#Nisos2026
           </div>
         </div>
       ) : (
@@ -153,11 +160,16 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
           </label>
           <input
             type="text"
-            placeholder="Your name"
+            placeholder="e.g. Maria Georgiou"
             value={name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.currentTarget.value)}
             style={inputStyle}
           />
+          {name.length > 0 && !nameValid && (
+            <div className="t-sm" style={{ color: 'var(--danger-500)', marginTop: -10, marginBottom: 'var(--s3)' }}>
+              Enter your first and last name
+            </div>
+          )}
 
           <label className="t-sm" style={{ display: 'block', marginBottom: 'var(--s2)' }}>
             Email
@@ -169,28 +181,54 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegEmail(e.currentTarget.value)}
             style={inputStyle}
           />
+          {regEmail.length > 0 && !emailValid && (
+            <div className="t-sm" style={{ color: 'var(--danger-500)', marginTop: -10, marginBottom: 'var(--s3)' }}>
+              Enter a valid email address
+            </div>
+          )}
 
           <label className="t-sm" style={{ display: 'block', marginBottom: 'var(--s2)' }}>
-            Choose a PIN (4-6 digits)
+            Password
           </label>
           <input
             type="password"
-            inputMode="numeric"
-            placeholder="e.g. 4821"
-            value={regPin}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegPin(e.currentTarget.value)}
+            placeholder="Choose a strong password"
+            value={regPassword}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegPassword(e.currentTarget.value)}
+            onFocus={() => setPasswordTouched(true)}
             style={inputStyle}
           />
 
-          {error && <div style={{ color: 'var(--signal-alert)', marginBottom: 'var(--s3)' }} className="t-sm">{error}</div>}
+          {passwordTouched && (
+            <ul style={{ listStyle: 'none', padding: 0, margin: '-10px 0 var(--s3)' }}>
+              {rules.map((r) => (
+                <li key={r.label} className="t-sm" style={{ color: r.ok ? 'var(--ok-500)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span aria-hidden="true">{r.ok ? '✓' : '○'}</span>
+                  {r.label}
+                </li>
+              ))}
+            </ul>
+          )}
 
-          <Button
-            block
-            loading={loading}
-            disabled={!name.trim() || !regEmail.trim() || !regPin}
-            onClick={handleRegister}
-            style={{ marginBottom: 'var(--s3)' }}
-          >
+          <label className="t-sm" style={{ display: 'block', marginBottom: 'var(--s2)' }}>
+            Confirm password
+          </label>
+          <input
+            type="password"
+            placeholder="Retype your password"
+            value={regConfirm}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRegConfirm(e.currentTarget.value)}
+            style={inputStyle}
+          />
+          {regConfirm.length > 0 && !passwordsMatch && (
+            <div className="t-sm" style={{ color: 'var(--danger-500)', marginTop: -10, marginBottom: 'var(--s3)' }}>
+              Passwords don't match
+            </div>
+          )}
+
+          {error && <div style={{ color: 'var(--danger-500)', marginBottom: 'var(--s3)' }} className="t-sm">{error}</div>}
+
+          <Button block loading={loading} disabled={!canRegister} onClick={handleRegister} style={{ marginBottom: 'var(--s3)' }}>
             Create account
           </Button>
 

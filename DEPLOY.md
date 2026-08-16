@@ -103,7 +103,7 @@ Vercel will automatically use `VITE_API_URL` if set. If not set, the app falls b
 If presenting on a single machine with both servers running:
 1. Start both servers: `npm run demo`
 2. Open http://localhost:5173 in a browser
-3. Login with `citizen@nisos.cy` / PIN `1234`
+3. Login with `citizen@nisos.cy` / `Cyprus#Nisos2026`
 4. All real data flows from the local backend
 
 **No deployment needed for demo.** Just run locally.

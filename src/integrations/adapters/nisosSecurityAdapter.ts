@@ -28,7 +28,7 @@ interface BackendLoginEvent {
   id: string;
   at: string;
   outcome: 'success' | 'failed';
-  method: 'pin' | 'registration';
+  method: 'password' | 'registration';
   device: string;
   ip: string;
 }
@@ -41,7 +41,7 @@ function mapLoginEvent(e: BackendLoginEvent): LoginEvent {
     // instead of a fabricated city keeps this honest.
     location: `IP ${e.ip}`,
     device: e.device,
-    method: e.method === 'registration' ? 'password' : 'pin',
+    method: 'password',
     outcome: e.outcome,
   };
 }
