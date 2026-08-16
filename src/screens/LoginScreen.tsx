@@ -26,7 +26,10 @@ export function LoginScreen({ onLogin }: { onLogin: (sessionId: string) => void 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  // Falls back to the live Railway backend so the deployed app works even if
+  // VITE_API_URL isn't set on the hosting platform. Local dev overrides this
+  // via .env.local (VITE_API_URL=http://localhost:3001), which is gitignored.
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://projectbank-production.up.railway.app';
 
   const completeLogin = async (sessionId: string) => {
     // Persist the session BEFORE refreshing so the registry's per-call

@@ -19,7 +19,7 @@ import { IntegrationError } from '../types';
 import { demoPaymentsAdapter } from '../demo/demoAdapters';
 
 function getApiBase(): string {
-  const url = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001';
+  const url = (import.meta.env.VITE_API_URL as string) || 'https://projectbank-production.up.railway.app';
   return `${url}/api`;
 }
 
