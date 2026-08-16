@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+*.local
+.env
+.env.*
+!.env.example
+
+# Runtime data for the local file-based backend - regenerated automatically
+# on first boot (see initDemoData in server/index.js). Not seed data other
+# environments should inherit.
+server/data/*.json

@@ -1,0 +1,164 @@
+/* ---------------------------------------------------------------------------
+   Nisos design tokens
+   Identity: Cyprus is the copper island (Kypros ~ cuprum). The palette pairs a
+   deep Mediterranean ink with an oxidised-copper accent and warm limestone
+   neutrals. Deliberately unlike any existing fintech or government brand.
+   --------------------------------------------------------------------------- */
+
+:root {
+  /* Brand ------------------------------------------------------------------ */
+  --copper-50:  #FDF4EE;
+  --copper-100: #F8E3D3;
+  --copper-200: #EFC3A4;
+  --copper-300: #E29E72;
+  --copper-400: #D47C4B;
+  --copper-500: #C05F2C;   /* primary */
+  --copper-600: #A34A20;
+  --copper-700: #82391A;
+  --copper-800: #5E2917;
+
+  --sea-50:  #EFF6F8;
+  --sea-100: #D7E8EE;
+  --sea-200: #A9CCD9;
+  --sea-300: #74A9BE;
+  --sea-400: #46839F;
+  --sea-500: #276781;   /* secondary */
+  --sea-600: #1B5069;
+  --sea-700: #143C50;
+  --sea-800: #0E2B39;
+  --sea-900: #0B1F2A;
+  --sea-950: #071620;
+
+  --olive-400: #8C9A6B;
+  --olive-500: #6E7D50;
+
+  /* Semantic --------------------------------------------------------------- */
+  --ok-500:   #2E8B62;
+  --ok-100:   #DCF2E7;
+  --warn-500: #B7791F;
+  --warn-100: #FBF0DA;
+  --danger-500: #C2422F;
+  --danger-100: #FBE3DF;
+  --info-500: #2F6FB7;
+  --info-100: #E1ECFA;
+
+  /* Light theme surfaces --------------------------------------------------- */
+  --bg:            #F6F4F1;
+  --bg-elevated:   #FFFFFF;
+  --surface:       #FFFFFF;
+  --surface-2:     #F1EEEA;
+  --surface-3:     #E7E3DD;
+  --surface-inset: #FAF8F6;
+  --scrim:         rgba(11, 31, 42, 0.42);
+
+  --text:        #14232B;
+  --text-muted:  #5B6B74;
+  --text-subtle: #8A98A0;
+  --text-invert: #FFFFFF;
+
+  --line:        rgba(20, 35, 43, 0.10);
+  --line-strong: rgba(20, 35, 43, 0.18);
+
+  --accent:      var(--copper-500);
+  --accent-ink:  #FFFFFF;
+  --accent-soft: var(--copper-50);
+  --brand-ink:   var(--sea-900);
+
+  /* Charts (colourblind-checked, works on both themes) --------------------- */
+  --c1: #276781;
+  --c2: #C05F2C;
+  --c3: #6E7D50;
+  --c4: #8C6BA0;
+  --c5: #B7791F;
+  --c6: #4E8FA8;
+  --c7: #A34A20;
+  --c8: #566B76;
+
+  /* Elevation -------------------------------------------------------------- */
+  --sh-1: 0 1px 2px rgba(11, 31, 42, .05), 0 1px 1px rgba(11, 31, 42, .04);
+  --sh-2: 0 2px 6px rgba(11, 31, 42, .06), 0 8px 20px rgba(11, 31, 42, .05);
+  --sh-3: 0 10px 30px rgba(11, 31, 42, .10), 0 2px 8px rgba(11, 31, 42, .06);
+  --sh-card: 0 1px 1px rgba(11,31,42,.04), 0 6px 18px rgba(11,31,42,.055);
+
+  /* Radii ------------------------------------------------------------------ */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* Spacing ---------------------------------------------------------------- */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 20px; --s6: 24px; --s7: 32px; --s8: 40px; --s9: 56px;
+
+  /* Type ------------------------------------------------------------------- */
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --font-num: 'Inter', ui-monospace, sans-serif;
+
+  --t-display: 600 34px/1.1 var(--font);
+  --t-h1: 600 26px/1.2 var(--font);
+  --t-h2: 600 20px/1.25 var(--font);
+  --t-h3: 600 16px/1.35 var(--font);
+  --t-body: 400 15px/1.5 var(--font);
+  --t-sm: 400 13px/1.45 var(--font);
+  --t-xs: 500 11px/1.4 var(--font);
+
+  /* Motion ----------------------------------------------------------------- */
+  --ease: cubic-bezier(.22, .61, .36, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 380ms;
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg:            #0A161D;
+  --bg-elevated:   #10222C;
+  --surface:       #10222C;
+  --surface-2:     #16303C;
+  --surface-3:     #1E3D4B;
+  --surface-inset: #0D1D26;
+  --scrim:         rgba(3, 10, 14, 0.6);
+
+  --text:        #EAF2F5;
+  --text-muted:  #9BB0BA;
+  --text-subtle: #6E8894;
+  --text-invert: #06131A;
+
+  --line:        rgba(234, 242, 245, 0.10);
+  --line-strong: rgba(234, 242, 245, 0.20);
+
+  --accent:      #E08247;
+  --accent-ink:  #200B02;
+  --accent-soft: rgba(224, 130, 71, .14);
+  --brand-ink:   #EAF2F5;
+
+  --ok-500:   #4FBF8B;
+  --ok-100:   rgba(79, 191, 139, .15);
+  --warn-500: #E0A83C;
+  --warn-100: rgba(224, 168, 60, .15);
+  --danger-500: #E4705C;
+  --danger-100: rgba(228, 112, 92, .15);
+  --info-500: #6BA5E7;
+  --info-100: rgba(107, 165, 231, .15);
+
+  --c1: #61A8C4;
+  --c2: #E08247;
+  --c3: #A3B383;
+  --c4: #B394C7;
+  --c5: #E0A83C;
+  --c6: #7FC4DC;
+  --c7: #D2724A;
+  --c8: #90A7B2;
+
+  --sh-1: 0 1px 2px rgba(0,0,0,.4);
+  --sh-2: 0 2px 6px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.3);
+  --sh-3: 0 12px 36px rgba(0,0,0,.5);
+  --sh-card: 0 1px 1px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.28);
+
+  color-scheme: dark;
+}

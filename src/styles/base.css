@@ -1,0 +1,140 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+html, body { overflow-x: hidden; }
+body {
+  margin: 0;
+  width: 100%;
+  max-width: 100vw;
+  font: var(--t-body);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; padding: 0; }
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; display: block; }
+h1, h2, h3, h4, p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+
+/* Scrollbars stay out of the way but remain usable */
+.scroll { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; -webkit-overflow-scrolling: touch; }
+.scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 99px; }
+.scroll::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Device shell — on desktop the prototype sits in a phone frame, on a real
+   phone it fills the screen. Logical properties throughout so an RTL locale
+   mirrors the whole layout with no extra CSS.
+   --------------------------------------------------------------------------- */
+.stage {
+  min-height: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 0;
+  background:
+    radial-gradient(1200px 600px at 12% -10%, color-mix(in srgb, var(--sea-500) 14%, transparent), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, color-mix(in srgb, var(--copper-500) 12%, transparent), transparent 55%),
+    var(--bg);
+}
+/* min-width: 0 below overrides the browser default of min-width: auto on
+   flex/grid items, which otherwise refuses to shrink an item below its
+   content's natural (unwrapped) width — the classic cause of a phone
+   screen rendering wider than the viewport and forcing horizontal panning. */
+.stage-inner { display: flex; gap: var(--s9); align-items: center; min-width: 0; max-width: 100%; }
+.stage-copy { max-width: 340px; display: none; }
+.stage-copy .mark { display: flex; align-items: center; gap: 10px; margin-bottom: var(--s5); }
+.stage-copy h1 { font: 400 40px/1.08 var(--font-display); letter-spacing: -.01em; margin-bottom: var(--s3); }
+.stage-copy p { color: var(--text-muted); font: var(--t-body); }
+.stage-copy .facts { margin-top: var(--s6); display: grid; gap: var(--s3); }
+.stage-copy .fact { display: flex; gap: 10px; align-items: flex-start; font: var(--t-sm); color: var(--text-muted); }
+
+.device {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 100dvh;
+  background: var(--bg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 900px) {
+  .stage { padding: var(--s7); }
+  .stage-copy { display: block; }
+  .device {
+    width: 402px;
+    height: min(874px, calc(100dvh - 64px));
+    border-radius: 46px;
+    box-shadow:
+      0 0 0 10px color-mix(in srgb, var(--sea-900) 92%, #000),
+      0 0 0 12px color-mix(in srgb, var(--sea-700) 60%, #000),
+      var(--sh-3);
+    overflow: hidden;
+  }
+  .device::after {
+    content: '';
+    position: absolute; inset-inline-start: 50%; top: 10px;
+    transform: translateX(-50%);
+    width: 104px; height: 26px; border-radius: 99px;
+    background: color-mix(in srgb, var(--sea-950) 96%, #000);
+    z-index: 60; pointer-events: none;
+  }
+  .device .topbar { padding-top: 44px; }
+}
+
+/* App frame ---------------------------------------------------------------- */
+.app-frame { position: relative; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.app-scroll { flex: 1; overflow-y: auto; overscroll-behavior-y: contain; padding: env(safe-area-inset-top) 0 0 0; }
+.page { padding: 0 var(--s5) calc(var(--s9) + 60px); }
+.page.flush { padding-inline: 0; }
+.page-pad { padding-inline: var(--s5); }
+
+.fade-in { animation: fadeIn var(--dur-3) var(--ease-out) both; }
+.rise { animation: rise var(--dur-3) var(--ease-out) both; }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+@keyframes popIn { from { opacity: 0; transform: scale(.94) } to { opacity: 1; transform: none } }
+@keyframes sheetUp { from { transform: translateY(100%) } to { transform: none } }
+@keyframes spin { to { transform: rotate(360deg) } }
+@keyframes shimmer { 100% { transform: translateX(100%) } }
+@keyframes pulseRing { 0% { transform: scale(.9); opacity: .7 } 70% { transform: scale(1.25); opacity: 0 } 100% { opacity: 0 } }
+.stagger > * { animation: rise var(--dur-3) var(--ease-out) both; }
+.stagger > *:nth-child(1) { animation-delay: 20ms }
+.stagger > *:nth-child(2) { animation-delay: 55ms }
+.stagger > *:nth-child(3) { animation-delay: 90ms }
+.stagger > *:nth-child(4) { animation-delay: 125ms }
+.stagger > *:nth-child(5) { animation-delay: 160ms }
+.stagger > *:nth-child(6) { animation-delay: 195ms }
+.stagger > *:nth-child(7) { animation-delay: 230ms }
+.stagger > *:nth-child(8) { animation-delay: 265ms }
+
+/* Simulated device status bar — desktop preview only, so the prototype reads
+   as a phone in screenshots without faking anything on a real device. */
+.statusbar { display: none; }
+@media (min-width: 900px) {
+  .statusbar {
+    position: absolute; inset-inline: 0; top: 0; height: 44px; z-index: 45;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 26px; pointer-events: none;
+    font: 600 13px/1 var(--font); color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .statusbar .right { display: flex; align-items: center; gap: 5px; }
+}
