@@ -10,7 +10,7 @@
  * Bump CACHE_VERSION on every deploy that should invalidate old caches.
  * ------------------------------------------------------------------------- */
 
-const CACHE_VERSION = 'nisos-v2';
+const CACHE_VERSION = 'nisos-v3';
 const SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 

@@ -6,6 +6,7 @@ import { STATUS_LABEL, STATUS_TONE } from '../integrations/config';
 import type { IntegrationStatus } from '../integrations/types';
 import { useApp } from '../state/store';
 import { useInstallPrompt } from '../lib/pwa';
+import { hasNisosSession } from '../integrations/adapters/nisosSecurityAdapter';
 
 /* --- Chrome --------------------------------------------------------------- */
 
@@ -542,10 +543,15 @@ export function Disclaimer({ children, icon = 'info' }: { children: React.ReactN
 
 export function DemoBanner({ children }: { children?: React.ReactNode }) {
   const { t } = useApp();
+  // Once the citizen is signed in to the Nisos backend, money, identity and
+  // payments really are live - claiming "no real service is connected" would
+  // be the opposite of the honesty this banner exists to provide. Government
+  // and wallet data are still demo, so the notice narrows rather than vanishes.
+  const live = hasNisosSession();
   return (
     <div className="demo-banner">
       <Icon name="info" size={16} />
-      <span>{children ?? t('common.demoNotice')}</span>
+      <span>{children ?? (live ? t('common.partialLiveNotice') : t('common.demoNotice'))}</span>
     </div>
   );
 }
