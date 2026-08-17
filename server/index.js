@@ -99,6 +99,53 @@ function recordLoginEvent(userId, outcome, method, req) {
 }
 
 /* =========================================================================
+ * Salt Edge (real open-banking aggregator, sandbox mode) - a genuine third
+ * party API call, not a simulation. Requires SALTEDGE_CLIENT_ID and
+ * SALTEDGE_SERVICE_SECRET to be set; every route below returns a real 503
+ * (not fake data) when they're missing.
+ * ========================================================================= */
+
+const SALTEDGE_BASE = 'https://www.saltedge.com/api/v6';
+
+function saltEdgeConfigured() {
+  return !!(process.env.SALTEDGE_CLIENT_ID && process.env.SALTEDGE_SERVICE_SECRET);
+}
+
+async function saltEdgeFetch(path, options = {}) {
+  const res = await fetch(`${SALTEDGE_BASE}${path}`, {
+    ...options,
+    headers: {
+      'App-id': process.env.SALTEDGE_CLIENT_ID,
+      Secret: process.env.SALTEDGE_SERVICE_SECRET,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(body?.error?.message || `Salt Edge request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return body;
+}
+
+/** Every Nisos citizen gets one Salt Edge customer, created lazily on first connect attempt. */
+async function ensureSaltEdgeCustomer(userId) {
+  const users = readDB('users');
+  const user = users[userId];
+  if (user.saltEdgeCustomerId) return user.saltEdgeCustomerId;
+
+  const body = await saltEdgeFetch('/customers', {
+    method: 'POST',
+    body: JSON.stringify({ data: { identifier: `nisos-${userId}` } }),
+  });
+  user.saltEdgeCustomerId = body.data.customer_id;
+  writeDB('users', users);
+  return user.saltEdgeCustomerId;
+}
+
+/* =========================================================================
  * Password policy - the same rules the client shows live while typing
  * (see src/lib/password.ts). Enforced here too because client-side
  * validation is a UX convenience, never the security boundary.
@@ -452,7 +499,115 @@ app.delete('/api/banking/accounts/:accountId', (req, res) => {
     .forEach((txId) => delete transactions[txId]);
   writeDB('transactions', transactions);
 
+  // A Salt Edge-sourced account being removed here should also revoke the
+  // underlying bank connection, not just delete our local copy - otherwise
+  // Salt Edge would keep read access to a bank the citizen thinks they
+  // disconnected. Best-effort: local removal already succeeded either way.
+  if (account.saltEdgeConnectionId && saltEdgeConfigured()) {
+    saltEdgeFetch(`/connections/${account.saltEdgeConnectionId}`, { method: 'DELETE' }).catch(() => {});
+  }
+
   res.json({ ok: true });
+});
+
+app.post('/api/banking/connect-bank', async (req, res) => {
+  const sessionId = req.headers.authorization?.replace('Bearer ', '');
+  const session = getSession(sessionId);
+  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  if (!saltEdgeConfigured()) {
+    return res.status(503).json({ error: 'Bank connection is not configured on this server yet.' });
+  }
+
+  try {
+    const customerId = await ensureSaltEdgeCustomer(session.userId);
+    const returnTo = req.body?.returnTo || `${req.headers.origin || ''}/#/money`;
+
+    const body = await saltEdgeFetch('/connections/connect', {
+      method: 'POST',
+      body: JSON.stringify({
+        data: {
+          customer_id: customerId,
+          consent: { scopes: ['accounts', 'transactions'] },
+          attempt: { return_to: returnTo },
+        },
+      }),
+    });
+    res.json({ connectUrl: body.data.connect_url });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Could not start the bank connection' });
+  }
+});
+
+app.post('/api/banking/sync-bank', async (req, res) => {
+  const sessionId = req.headers.authorization?.replace('Bearer ', '');
+  const session = getSession(sessionId);
+  if (!session) return res.status(401).json({ error: 'Unauthorized' });
+  if (!saltEdgeConfigured()) {
+    return res.status(503).json({ error: 'Bank connection is not configured on this server yet.' });
+  }
+
+  try {
+    const users = readDB('users');
+    const user = users[session.userId];
+    if (!user.saltEdgeCustomerId) return res.json({ synced: 0 });
+
+    const connectionsBody = await saltEdgeFetch(`/connections?customer_id=${user.saltEdgeCustomerId}`);
+    const connections = (connectionsBody.data || []).filter((c) => c.status === 'active');
+
+    const accounts = readDB('accounts');
+    const transactions = readDB('transactions');
+    let synced = 0;
+
+    for (const connection of connections) {
+      const accountsBody = await saltEdgeFetch(
+        `/accounts?customer_id=${user.saltEdgeCustomerId}&connection_id=${connection.id}`,
+      );
+      for (const seAccount of accountsBody.data || []) {
+        // Deterministic id from the Salt Edge account id, so re-syncing
+        // updates the same record instead of duplicating it.
+        const localId = `acc_se_${seAccount.id}`;
+        accounts[localId] = {
+          id: localId,
+          userId: session.userId,
+          type: seAccount.nature === 'savings' ? 'savings' : seAccount.nature === 'credit_card' ? 'card' : 'current',
+          name: seAccount.name || connection.provider_name || 'Connected account',
+          bank: connection.provider_name || 'Connected bank',
+          iban: seAccount.iban || seAccount.extra?.account_number || '',
+          balance: seAccount.balance,
+          currency: seAccount.currency_code || 'EUR',
+          status: 'active',
+          mandatory: false,
+          saltEdgeConnectionId: connection.id,
+          saltEdgeAccountId: seAccount.id,
+          createdAt: seAccount.created_at || new Date().toISOString(),
+        };
+        synced++;
+
+        const txBody = await saltEdgeFetch(
+          `/transactions?customer_id=${user.saltEdgeCustomerId}&account_id=${seAccount.id}`,
+        );
+        for (const tx of txBody.data || []) {
+          const localTxId = `txn_se_${tx.id}`;
+          transactions[localTxId] = {
+            id: localTxId,
+            accountId: localId,
+            type: tx.amount < 0 ? 'debit' : 'credit',
+            amount: Math.abs(tx.amount),
+            description: tx.description || tx.extra?.original_amount ? tx.description : 'Bank transaction',
+            date: tx.made_on ? new Date(tx.made_on).toISOString() : new Date().toISOString(),
+            category: 'other',
+            status: tx.status === 'posted' ? 'completed' : 'pending',
+          };
+        }
+      }
+    }
+
+    writeDB('accounts', accounts);
+    writeDB('transactions', transactions);
+    res.json({ synced });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message || 'Could not sync your bank accounts' });
+  }
 });
 
 app.post('/api/banking/transfer', (req, res) => {

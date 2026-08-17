@@ -42,9 +42,9 @@ async function authedFetch<T>(path: string, init?: RequestInit): Promise<T> {
       const body = await res.json().catch(() => ({}));
       throw new IntegrationError(body.error || 'This action is not allowed.', 'rejected', false);
     }
-    if (res.status === 400) {
+    if (res.status === 400 || res.status === 503) {
       const body = await res.json().catch(() => ({}));
-      if (body.error) throw new IntegrationError(body.error, 'rejected', false);
+      if (body.error) throw new IntegrationError(body.error, res.status === 503 ? 'consent_revoked' : 'rejected', false);
     }
     throw new IntegrationError('Nisos backend unavailable', 'upstream_unavailable', true);
   }
@@ -164,13 +164,28 @@ export const nisosLiveBankingAdapter: BankingPort = {
   },
 
   async beginConsent() {
-    throw new IntegrationError(
-      'Account connection requires a licensed open-banking provider. Nisos accounts above are this device\'s own backend ledger, not an external bank.',
-      'consent_revoked',
-      false,
-    );
+    // Real Salt Edge integration (see docs/INTEGRATIONS.md): the citizen
+    // picks their own bank on Salt Edge's hosted page - Nisos never sees
+    // banking credentials. Returns a real 503 if the server has no Salt
+    // Edge keys configured, rather than pretending this always works.
+    const returnTo = `${window.location.origin}/#/money/bank-callback`;
+    const { connectUrl } = await authedFetch<{ connectUrl: string }>('/banking/connect-bank', {
+      method: 'POST',
+      body: JSON.stringify({ returnTo }),
+    });
+    return { authorizationUrl: connectUrl, state: '' };
   },
 };
+
+/**
+ * Called on return from the Salt Edge hosted connect flow. Pulls whatever
+ * accounts/transactions Salt Edge now has for this citizen's connections
+ * into the Nisos backend's own ledger so the rest of the app (which only
+ * knows how to read Nisos accounts) picks them up unchanged.
+ */
+export async function syncSaltEdgeBank(): Promise<{ synced: number }> {
+  return authedFetch<{ synced: number }>('/banking/sync-bank', { method: 'POST' });
+}
 
 export function hasNisosSession(): boolean {
   return !!getSessionId();

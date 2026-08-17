@@ -14,6 +14,7 @@ import { Analytics } from './screens/money/Analytics';
 import { Bills } from './screens/money/Bills';
 import { Goals } from './screens/money/Goals';
 import { ConnectBank } from './screens/money/ConnectBank';
+import { BankCallback } from './screens/money/BankCallback';
 import { AddAccount } from './screens/money/AddAccount';
 import { Government } from './screens/government/Government';
 import { GovCategory } from './screens/government/GovCategory';
@@ -107,6 +108,7 @@ function Router({ path }: { path: string }) {
   if (path === '/money/bills') return <Bills />;
   if (path === '/money/goals') return <Goals />;
   if (path === '/money/connect') return <ConnectBank />;
+  if (path === '/money/bank-callback') return <BankCallback />;
   if (path === '/money/add-account') return <AddAccount />;
   if (path === '/gov') return <Government />;
   if ((params = match('/gov/category/:cat', path))) return <GovCategory category={params.cat} />;

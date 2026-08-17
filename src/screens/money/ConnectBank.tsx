@@ -3,6 +3,7 @@ import { Icon } from '../../components/Icon';
 import { Badge, Button, Card, Disclaimer, ListRow, ResultState, SectionHead, Sheet, TopBar } from '../../components/ui';
 import { institutions } from '../../data/seed';
 import { registry } from '../../integrations/registry';
+import { hasNisosSession } from '../../integrations/adapters/nisosSecurityAdapter';
 import { useApp } from '../../state/store';
 
 /**
@@ -73,6 +74,30 @@ export function ConnectBank() {
             </li>
           </ol>
         </Card>
+
+        {hasNisosSession() && (
+          <>
+            <SectionHead title="Real connection" />
+            <Card className="mb4">
+              <div className="row" style={{ gap: 'var(--s4)', alignItems: 'flex-start' }}>
+                <span className="avatar-ico ok">
+                  <Icon name="database" size={20} />
+                </span>
+                <div style={{ flex: 1 }}>
+                  <h2 className="t-h3">Connect via Salt Edge</h2>
+                  <p className="t-sm muted mt2">
+                    Pick your bank on Salt Edge's own secure page. Nisos never sees your banking credentials - only
+                    the read-only accounts and transactions you consent to share. This is a real sandbox connection,
+                    not simulated data.
+                  </p>
+                </div>
+              </div>
+              <Button block className="mt4" icon="link" loading={state === 'connecting'} onClick={() => connect('saltedge')}>
+                Connect a bank
+              </Button>
+            </Card>
+          </>
+        )}
 
         <SectionHead title="Available connections" />
         <div className="list card-list">
